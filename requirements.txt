@@ -2,6 +2,7 @@ blinker==1.7.0
 certifi==2024.2.2
 charset-normalizer==3.3.2
 click==8.1.7
+cmake==3.29.3
 contourpy==1.2.1
 cycler==0.12.1
 filelock==3.13.4
