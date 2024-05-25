@@ -61,9 +61,11 @@ import io
 app = Flask(__name__)
 
 # Load a pretrained YOLOv8n model
-model = YOLO("yolov8s-seg.pt")
+#model = YOLO("yolov8s-seg.pt")
+#model = YOLO("yolov8s-seg.pt")
+model = YOLO("yolov8hp.pt")
 
-@app.route('/upload-image', methods=['POST'])
+@app.route('/detect', methods=['POST'])
 def upload_image():
     if 'file' not in request.files:
         return "No file part", 400
