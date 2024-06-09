@@ -8,8 +8,9 @@ app = Flask(__name__)
 
 # Load a pretrained YOLOv8n model
 #model = YOLO("yolov8s-seg.pt")
-#model = YOLO("yolov8s-seg.pt")
-model = YOLO("yolov8hp.pt")
+model = YOLO("best.pt")
+#model = YOLO("yolov8hp.pt")
+#model = YOLO("yolov8best200.pt")
 
 @app.route('/detect', methods=['POST'])
 def upload_image():
@@ -23,9 +24,11 @@ def upload_image():
     if file and allowed_file(file.filename):
         image = Image.open(file.stream)
         #print(image)
-        results = model(image, show_labels=False, show_boxes=True)  # adjust size according to your needs
+        print("begin predicting")
+        results = model(image)#, show_labels=True, show_boxes=True)  # adjust size according to your needs
 
         result = results[0]
+        print(result)
         #print(f"Results {len(results)}")
         im_bgr = result.plot()
 
