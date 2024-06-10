@@ -53,3 +53,4 @@ tzdata==2024.1
 ultralytics==8.2.19
 urllib3==2.2.1
 Werkzeug==3.0.2
+gunicorn

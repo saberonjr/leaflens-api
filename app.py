@@ -18,7 +18,7 @@ model = YOLO("best.pt")
 #model = YOLO("yolov8best200.pt")
 
 ## Set the API key and model name
-MODEL="gpt-4-turbo"
+MODEL="gpt-4o"
 OPEN_API_KEY = "sk-proj-nSSh5COvFT01PIg0H0oRT3BlbkFJZJRLhYR8TanJ6t9T1mRF"
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "sk-proj-nSSh5COvFT01PIg0H0oRT3BlbkFJZJRLhYR8TanJ6t9T1mRF"))
 
