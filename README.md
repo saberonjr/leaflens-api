@@ -1,2 +1,2 @@
 # leaflens-api
-# verdetech 2
+# verdetech
