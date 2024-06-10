@@ -2,3 +2,5 @@ flask
 python-dotenv
 openai
 gunicorn
+Pillow
+ultralytics
