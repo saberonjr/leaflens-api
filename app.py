@@ -4,8 +4,8 @@ from flask import Flask
 
 app = Flask(__name__)
 
-@app.route('/', methods=['POST'])
-def upload_image():
+@app.route('/', methods=['GET'])
+def home():
     return "Hello World"
 
 
