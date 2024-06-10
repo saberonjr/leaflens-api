@@ -24,7 +24,6 @@ model = YOLO("best.pt")
 ## Set the API key and model name
 MODEL="gpt-4o"
 OPEN_API_KEY = os.environ["OPENAI_API_KEY"]
-print(f"API Key: {OPEN_API_KEY}")
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPEN_API_KEY))
 
@@ -61,8 +60,6 @@ def upload_image():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
 
-def count_tokens(text):
-    return len(openai.Tokenizer().encode(text))
 
 # Function to encode the image
 def encode_image(image_path):
@@ -78,8 +75,6 @@ def analyze_leaf():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    # Path to your image
-    #image_path = "path_to_your_image.jpg"
 
     # Getting the base64 string
     base64_image = image_data = convert_image_to_base64(file) #encode_image(image_path)
@@ -110,7 +105,9 @@ def analyze_leaf():
 
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
     responseText = response.json()
+    print(responseText)
     content = responseText['choices'][0]['message']['content']
+    print(content)
     #print(content)
     response = {
         "model_response": content
@@ -146,11 +143,10 @@ def analyze_leaf4():
     )
 
     result = completion.choices[0].message.content
-    return jsonify(result)
 
     # Extract and return the relevant information
     response = {
-        "model_response": completion.choices[0].message['content']
+        "model_response": result
     }
     return jsonify(response)
 
@@ -161,53 +157,6 @@ def convert_image_to_base64(image_file):
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode('utf-8')
 
-def analyze_leaf3():
-    user_message = request.json.get('user_message', '')
-    if not user_message:
-        return jsonify({'error': 'No user message provided'}), 400
-    completion = client.chat.completions.create(
-    model=MODEL,
-        messages=[
-            {"role": "system", "content": "You are an expert in diseases of plants. You can recognize the diseases by examining the leaves of plants. When you are presented with an image of a leaf with signs of disease, you give more information about the plant and the disease information. You also give information about possible remedies for the plant disease."}, # <-- This is the system message that provides context to the model
-            {"role": "user", "content": user_message}  # <-- This is the user message for which the model will generate a response
-        ]
-    )
-
-
-    print("Assistant: " + completion.choices[0].message.content)
-    return jsonify(completion.choices[0].message.content)
-
-def analyze_leaf2():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    # Assuming the file is a proper image
-    # For simplicity, directly sending it as binary data might not be optimal or correct depending on API specs
-    img_data = file.read()
-
-    # Example placeholder - replace with actual OpenAI API call
-    response = call_openai_api(img_data)
-
-    return jsonify(response)
-
-def call_openai_api(image_data):
-    # This is a placeholder function. You need to implement the actual API call to OpenAI.
-    headers = {
-        'Authorization': f'Bearer {OPENAI_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    # Construct the data payload as per OpenAI's requirements
-    data = {
-        'prompt': 'Analyze this leaf',  # Example prompt, adjust based on actual requirement
-        'image': image_data,
-        'model': 'image-gpt-3'  # Example model, use the correct one
-    }
-    response = requests.post('https://api.openai.com/v1/call', headers=headers, json=data)
-    return response.json()
 
 if __name__ == '__main__':
-    app.run( host='0.0.0.0', port=8008)
+    app.run( host='0.0.0.0', port=8000)
