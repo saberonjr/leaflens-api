@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/abb420b9-fa1c-4fa6-8053-fc6192b1ee2a/resourceGroups/ResearchAndDev/providers/Microsoft.Web/sites/leaflens",
+    "appService.deploySubpath": "."
+}
