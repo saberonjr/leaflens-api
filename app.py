@@ -16,10 +16,7 @@ app = Flask(__name__)
 load_dotenv(find_dotenv())
 
 # Load a pretrained YOLOv8n model
-#model = YOLO("yolov8s-seg.pt")
 model = YOLO("best.pt")
-#model = YOLO("yolov8hp.pt")
-#model = YOLO("yolov8best200.pt")
 
 ## Set the API key and model name
 MODEL="gpt-4o"
@@ -38,13 +35,11 @@ def upload_image():
     
     if file and allowed_file(file.filename):
         image = Image.open(file.stream)
-        #print(image)
         print("begin predicting")
         results = model(image)#, show_labels=True, show_boxes=True)  # adjust size according to your needs
 
         result = results[0]
         print(result)
-        #print(f"Results {len(results)}")
         im_bgr = result.plot()
 
         # Convert BGR to RGB
@@ -77,7 +72,7 @@ def analyze_leaf():
 
 
     # Getting the base64 string
-    base64_image = image_data = convert_image_to_base64(file) #encode_image(image_path)
+    base64_image = convert_image_to_base64(file) #encode_image(image_path)
 
     headers = {
     "Content-Type": "application/json",
@@ -105,50 +100,12 @@ def analyze_leaf():
 
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
     responseText = response.json()
-    print(responseText)
     content = responseText['choices'][0]['message']['content']
-    print(content)
-    #print(content)
     response = {
         "model_response": content
     }
     return jsonify(response)
 
-def analyze_leaf4():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-
-    # Convert the uploaded image file to base64
-    image_data = convert_image_to_base64(file)
-
-
-
-    # Example usage
-    
-    #token_count = count_tokens(image_data)
-    #print(f"Token count: {token_count}")
-    #return jsonify({'token_count': token_count})    
-
-    # Create the completion using the OpenAI API
-    completion = client.chat.completions.create(
-        model="gpt-4o",  # Adjust the model version as required
-        messages=[
-            {"role": "system", "content": "You are plant pathologist. Given an image of plant leaf, name the plant, the disease if present, and possible remedies. Limit result to 256 tokens."},
-            {"role": "user", "content": image_data}  # Assuming the model can handle base64 images as text
-        ]
-    )
-
-    result = completion.choices[0].message.content
-
-    # Extract and return the relevant information
-    response = {
-        "model_response": result
-    }
-    return jsonify(response)
 
 def convert_image_to_base64(image_file):
     """Converts image file to base64 string."""
