@@ -8,8 +8,12 @@ import os
 import base64
 from io import BytesIO
 from openai import OpenAI
+from dotenv import load_dotenv, find_dotenv
 import openai
+
 app = Flask(__name__)
+
+load_dotenv(find_dotenv())
 
 # Load a pretrained YOLOv8n model
 #model = YOLO("yolov8s-seg.pt")
@@ -19,8 +23,10 @@ model = YOLO("best.pt")
 
 ## Set the API key and model name
 MODEL="gpt-4o"
-OPEN_API_KEY = "sk-proj-nSSh5COvFT01PIg0H0oRT3BlbkFJZJRLhYR8TanJ6t9T1mRF"
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "sk-proj-nSSh5COvFT01PIg0H0oRT3BlbkFJZJRLhYR8TanJ6t9T1mRF"))
+OPEN_API_KEY = os.environ["OPENAI_API_KEY"]
+print(f"API Key: {OPEN_API_KEY}")
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPEN_API_KEY))
 
 @app.route('/detect', methods=['POST'])
 def upload_image():
@@ -204,4 +210,4 @@ def call_openai_api(image_data):
     return response.json()
 
 if __name__ == '__main__':
-    app.run( host='0.0.0.0', port=8000)
+    app.run( host='0.0.0.0', port=8008)

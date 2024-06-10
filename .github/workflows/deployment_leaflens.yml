@@ -36,11 +36,11 @@ jobs:
         run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: python-app
           path: |
-            release.zip
+            .
             !venv/
 
   deploy:
@@ -49,25 +49,17 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
           name: python-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      
+          path: . 
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6331A73A39634D19936234485320EAB0 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_34A6D332953044228C1B56A3AA894CF2 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_996D59143DD94FD0A83F5941BB6DB269 }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
@@ -75,4 +67,5 @@ jobs:
         with:
           app-name: 'leaflens'
           slot-name: 'Production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           
