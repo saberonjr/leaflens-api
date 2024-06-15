@@ -16,13 +16,17 @@ app = Flask(__name__)
 load_dotenv(find_dotenv())
 
 # Load a pretrained YOLOv8n model
-model = YOLO("best.pt")
+model = YOLO("best.pt" )
+modelClassifier = YOLO("leaflens-classification.pt")
 
 ## Set the API key and model name
 MODEL="gpt-4o"
-OPEN_API_KEY = os.environ["OPENAI_API_KEY"]
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPEN_API_KEY))
+# temporary only:
+
+#OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
 
 @app.route('/detect', methods=['POST'])
 def upload_image():
@@ -35,11 +39,14 @@ def upload_image():
     
     if file and allowed_file(file.filename):
         image = Image.open(file.stream)
-        print("begin predicting")
-        results = model(image)#, show_labels=True, show_boxes=True)  # adjust size according to your needs
-
+        #print("begin predicting")
+        results = model(image )#, show_labels=True, show_boxes=True)  # adjust size according to your needs
+        #results_classifier = modelClassifier(image, conf=0.80)
+        #print(results_classifier[0])
         result = results[0]
-        print(result)
+                    
+        #result = results[0]
+        #print(result)
         im_bgr = result.plot()
 
         # Convert BGR to RGB
@@ -76,7 +83,7 @@ def analyze_leaf():
 
     headers = {
     "Content-Type": "application/json",
-    "Authorization": f"Bearer {OPEN_API_KEY}"
+    "Authorization": f"Bearer {OPENAI_API_KEY}"
     }
 
     payload = {
@@ -116,4 +123,4 @@ def convert_image_to_base64(image_file):
 
 
 if __name__ == '__main__':
-    app.run( host='0.0.0.0', port=8000)
+    app.run( host='0.0.0.0', port=8001)
