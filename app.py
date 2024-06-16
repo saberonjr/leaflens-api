@@ -1,62 +1,128 @@
 
-from flask import Flask, request, send_file, jsonify
 from PIL import Image
 import requests
 from ultralytics import YOLO
+import numpy as np
 import io
 import os
+import cv2
 import base64
 from io import BytesIO
 from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 import openai
 
-app = Flask(__name__)
+import uvicorn
+import logging
+from fastapi import FastAPI, Form, Request, status, File, UploadFile, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from threading import Thread
+from typing import Callable, Any
+
+app = FastAPI(title="UTS VerdeTech LeafLens API")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+logging.basicConfig(level=logging.INFO)
 
 load_dotenv(find_dotenv())
 
 # Load a pretrained YOLOv8n model
-model = YOLO("best.pt" )
-modelClassifier = YOLO("leaflens-classification.pt")
+# Load the YOLO model
+try:
+    model = YOLO("best.pt" )
+    #modelClassifier = YOLO("leaflens-classification.pt")
+except Exception as e:
+    logging.error(f"Failed to load model: {e}")
+    raise RuntimeError("Model loading failed")
+
+
 
 ## Set the API key and model name
 MODEL="gpt-4o"
 
 # temporary only:
 
-#OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", OPENAI_API_KEY))
 
-@app.route('/detect', methods=['POST'])
-def upload_image():
-    if 'file' not in request.files:
-        return "No file part", 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return "No selected file", 400
-    
-    if file and allowed_file(file.filename):
-        image = Image.open(file.stream)
-        #print("begin predicting")
-        results = model(image )#, show_labels=True, show_boxes=True)  # adjust size according to your needs
-        #results_classifier = modelClassifier(image, conf=0.80)
-        #print(results_classifier[0])
-        result = results[0]
-                    
-        #result = results[0]
-        #print(result)
-        im_bgr = result.plot()
+def detect_objects(image):
+    try:
+        # Run inference on the input image
+        results = model(image)
+        if not results:
+            return None
+        # Process each result in the list
+        for result in results:
+            # Plot the detection results on the original image
+            annotated_image = result.plot()
 
-        # Convert BGR to RGB
-        im_rgb = Image.fromarray(im_bgr[..., ::-1])
+            # Convert the annotated image to bytes
+            _, img_encoded = cv2.imencode('.png', annotated_image)
 
-        # Save image to a bytes buffer
-        buf = io.BytesIO()
-        im_rgb.save(buf, format='JPEG')
-        buf.seek(0)
-        return send_file(buf, mimetype='image/jpeg')
+        return img_encoded
+    except Exception as e:
+        logging.error(f"Error in detect_objects: {e}")
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    print('Request for index page received')
+    return templates.TemplateResponse('index.html', {"request": request})
+
+@app.post('/hello', response_class=HTMLResponse)
+async def hello(request: Request, name: str = Form(...)):
+    if name:
+        print('Request for hello page received with name=%s' % name)
+        return templates.TemplateResponse('hello.html', {"request": request, 'name':name})
+    else:
+        print('Request for hello page received with no name or blank name -- redirecting')
+        return RedirectResponse(request.url_for("index"), status_code=status.HTTP_302_FOUND)
+
+
+@app.get('/favicon.ico')
+async def favicon():
+    file_name = 'favicon.ico'
+    file_path = './static/' + file_name
+    return FileResponse(path=file_path, headers={'mimetype': 'image/vnd.microsoft.icon'})
+
+
+
+#@app.route('/detect', methods=['POST'])
+
+@app.post("/detect")
+async def detect(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+    
+    if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+            raise HTTPException(status_code=400, detail="Invalid file type")
+
+    # Read image into memory
+    image_data = await file.read()
+    # Convert to a NumPy array
+    nparr = np.frombuffer(image_data, np.uint8)
+    # Decode image
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    # Call the object detection method
+    result = detect_objects(img)
+    if result is None:
+        raise HTTPException(status_code=500, detail="Failed to process image")
+    
+    print("Result type:", type(result))
+    print("Result array shape:", result.shape)  # Useful if result is a NumPy array
+
+    if result.size == 0:
+        raise HTTPException(status_code=500, detail="Image processing failed or returned empty result")
+
+    return Response(content=result.tobytes(), media_type="image/png")
+    # Convert the results back to a file response
+    #return FileResponse(result.tobytes(), media_type="image/png", filename="result.png")
+    
 
 
 def allowed_file(filename):
@@ -68,18 +134,15 @@ def encode_image(image_path):
   with open(image_path, "rb") as image_file:
     return base64.b64encode(image_file.read()).decode('utf-8')
 
-@app.route('/analyze-leaf', methods=['POST'])
-def analyze_leaf():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+#@app.route('/analyze-leaf', methods=['POST'])
+@app.post("/analyze-leaf")
+async def detect(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        raise HTTPException(status_code=400, detail="Invalid file type")
 
 
     # Getting the base64 string
-    base64_image = convert_image_to_base64(file) #encode_image(image_path)
+    base64_image = await convert_image_to_base64(file)
 
     headers = {
     "Content-Type": "application/json",
@@ -111,16 +174,14 @@ def analyze_leaf():
     response = {
         "model_response": content
     }
-    return jsonify(response)
+    return response
 
 
-def convert_image_to_base64(image_file):
+async def convert_image_to_base64(image_file: UploadFile):
     """Converts image file to base64 string."""
-    buffer = BytesIO()
-    image_file.save(buffer)
-    buffer.seek(0)
-    return base64.b64encode(buffer.read()).decode('utf-8')
+    contents = await image_file.read()
+    return base64.b64encode(contents).decode('utf-8')
 
 
 if __name__ == '__main__':
-    app.run( host='0.0.0.0', port=8001)
+    uvicorn.run('app:app', host='0.0.0.0', port=8001)
